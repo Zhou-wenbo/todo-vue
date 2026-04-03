@@ -1,7 +1,7 @@
 <template>
   <div class="container">
 
-    <h1>待办事项 - 团队版</h1>
+    <h1>待办事项 - 团队协作版</h1>
     <!--登录功能开发中-->
     <TodoInput @add="addTask" />
     
