@@ -3,8 +3,11 @@
 
     <h1>待办事项 - 团队协作版</h1>
     <!--登录功能开发中-->
+    <!--这是新功能：登录注释-->
     <TodoInput @add="addTask" />
-    
+    <button @click="fetchRandomTask" :disabled="loading">随机推荐任务</button>
+    <p v-if="loading">加载中...</p>
+    <p v-if="randomTask">推荐任务：{{randomTask}}</p>
     <TodoFilter 
       :currentFilter="currentFilter" 
       @change="setFilter" 
@@ -28,8 +31,36 @@ import TodoList from './components/TodoList.vue'
 
 const tasks = ref([])
 const currentFilter = ref('all')
+const loading = ref (false)
+const randomTask = ref('')
+const fetchRandomTask = async () =>{
+  loading.value = true
+  randomTask.value = ''
+  //1.发起网络请求
+  try {
+     const randomId = Math.floor(Math.random() * 200 ) + 1
+     const response = await fetch(`https://jsonplaceholder.typicode.com/todos/${randomId}`)
+
+  //2. 检查响应是否成功
+  if(!response.ok){
+    throw new Error('网络响应失败')
+  }
+
+  //3.解析JSON数据
+   const date = await response.json()
+
+  //4.将数据中的title 字段存入 randomTask
+   randomTask.value = date.title
+} catch(error) {
+     console.error('请求出错:',error)
+     randomTask.value = '获取失败，请稍后重试'
+}finally{
+    loading.value = false
+}
+}
 
 const addTask = (text) => {
+  console.log('添加任务：',text)
   const newId = tasks.value.length ? Math.max(...tasks.value.map(t => t.id)) + 1 : 1
   tasks.value.push({
     id: newId,
