@@ -1,202 +1,202 @@
 <template>
-  <div class="container">
-
-    <h1>待办事项 - 团队协作版</h1>
-    <!--登录功能开发中-->
-    <!--这是新功能：登录注释-->
-    <TodoInput @add="addTask" />
-    <button @click="fetchRandomTask" :disabled="loading">随机推荐任务</button>
-    <p v-if="loading">加载中...</p>
-    <p v-if="randomTask">推荐任务：{{randomTask}}</p>
-    <TodoFilter 
-      :currentFilter="currentFilter" 
-      @change="setFilter" 
-    />
-    
-    <TodoList 
-      :tasks="tasks" 
-      :filter="currentFilter"
-      @toggle="toggleComplete"
-      @delete="deleteTask"
-      @edit="editTask"
-    />
+  <div id="app">
+    <nav class="glass-nav">
+      <div class="nav-brand">
+        <router-link to="/" class="brand-link">✅ 任务大师</router-link>
+      </div>
+      <div class="nav-links">
+        <router-link to="/">首页</router-link>
+        <router-link to="/about">关于</router-link>
+        <router-link to="/deleted">回收站</router-link>
+      </div>
+      <div class="nav-auth">
+        <template v-if="userStore.user">
+          <span class="user-greeting">👋 {{ userStore.user.username }}</span>
+          <button @click="logout" class="logout-btn">退出</button>
+        </template>
+        <template v-else>
+          <router-link to="/login" class="auth-link">登录</router-link>
+          <router-link to="/register" class="auth-link register">注册</router-link>
+        </template>
+      </div>
+    </nav>
+    <main class="main-content">
+      <router-view />
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import TodoInput from './components/TodoInput.vue'
-import TodoFilter from './components/TodoFilter.vue'
-import TodoList from './components/TodoList.vue'
+import { useUserStore } from './stores/user';
+import { useRouter } from 'vue-router';
 
-const tasks = ref([])
-const currentFilter = ref('all')
-const loading = ref (false)
-const randomTask = ref('')
-const fetchRandomTask = async () =>{
-  loading.value = true
-  randomTask.value = ''
-  //1.发起网络请求
-  try {
-     const randomId = Math.floor(Math.random() * 200 ) + 1
-     const response = await fetch(`https://jsonplaceholder.typicode.com/todos/${randomId}`)
+const userStore = useUserStore();
+const router = useRouter();
 
-  //2. 检查响应是否成功
-  if(!response.ok){
-    throw new Error('网络响应失败')
-  }
-
-  //3.解析JSON数据
-   const date = await response.json()
-
-  //4.将数据中的title 字段存入 randomTask
-   randomTask.value = date.title
-} catch(error) {
-     console.error('请求出错:',error)
-     randomTask.value = '获取失败，请稍后重试'
-}finally{
-    loading.value = false
-}
-}
-
-const addTask = (text) => {
-  console.log('添加任务：',text)
-  const newId = tasks.value.length ? Math.max(...tasks.value.map(t => t.id)) + 1 : 1
-  tasks.value.push({
-    id: newId,
-    text: text,
-    completed: false
-  })
-}
-
-const deleteTask = (id) => {
-  tasks.value = tasks.value.filter(t => t.id !== id)
-}
-
-const toggleComplete = (id) => {
-  const task = tasks.value.find(t => t.id === id)
-  if (task) task.completed = !task.completed
-}
-
-const editTask = (id) => {
-  const task = tasks.value.find(t => t.id === id)
-  if (task) {
-    const newText = prompt('编辑任务', task.text)
-    if (newText && newText.trim()) {
-      task.text = newText.trim()
-    }
-  }
-}
-
-const setFilter = (filter) => {
-  currentFilter.value = filter
-}
-
-const loadTasks = () => {
-  const stored = localStorage.getItem('tasks')
-  if (stored) {
-    tasks.value = JSON.parse(stored)
-  } else {
-    tasks.value = [{ id: 1, text: '学习 Vue 组件', completed: false }]
-  }
-}
-loadTasks()
-
-watch(tasks, (newTasks) => {
-  localStorage.setItem('tasks', JSON.stringify(newTasks))
-}, { deep: true })
+const logout = () => {
+  userStore.logout();
+  router.push('/login');
+};
 </script>
 
-<style scoped>
+<style>
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
+
 body {
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #f5f5f5;
-  padding: 20px;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: linear-gradient(145deg, #f1f5f9 0%, #e6edf4 100%);
+  min-height: 100vh;
 }
-.container {
-  max-width: 500px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-h1 {
-  text-align: center;
-  margin-bottom: 20px;
-}
-.input-area {
+
+#app {
+  min-height: 100vh;
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  flex-direction: column;
 }
-#taskInput {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-}
-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-}
-button:hover {
-  background-color: #0056b3;
-}
-.filter-area {
+
+/* 玻璃态导航栏 */
+.glass-nav {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 5%;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
 }
-.filter-btn {
-  background-color: #e9ecef;
-  color: #495057;
+
+.brand-link {
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: linear-gradient(135deg, #0f172a, #3b82f6);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  letter-spacing: -0.5px;
 }
-.filter-btn.active {
-  background-color: #007bff;
-  color: white;
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
 }
-.task-list {
-  list-style: none;
+
+.nav-links a {
+  text-decoration: none;
+  font-weight: 500;
+  color: #1e293b;
+  transition: color 0.2s;
+  font-size: 1rem;
+  padding: 6px 0;
 }
-.task-item {
+
+.nav-links a:hover {
+  color: #3b82f6;
+}
+
+.nav-links a.router-link-active {
+  color: #3b82f6;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.nav-auth {
   display: flex;
   align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-  gap: 10px;
+  gap: 1rem;
 }
-.task-check {
-  width: 20px;
-  height: 20px;
+
+.user-greeting {
+  font-weight: 500;
+  color: #0f172a;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-size: 0.9rem;
 }
-.task-text {
-  flex: 1;
+
+.auth-link {
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 40px;
+  transition: all 0.2s;
 }
-.task-text.completed {
-  text-decoration: line-through;
-  color: #aaa;
+
+.auth-link:first-child {
+  color: #3b82f6;
+  background: transparent;
+  border: 1px solid #3b82f6;
 }
-.task-edit, .task-delete {
+
+.auth-link:first-child:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+.auth-link.register {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.auth-link.register:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.logout-btn {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  color: #dc2626;
+  font-weight: 500;
   cursor: pointer;
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 40px;
+  transition: 0.2s;
 }
-.task-edit {
-  color: #28a745;
+
+.logout-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
 }
-.task-delete {
-  color: #dc3545;
+
+.main-content {
+  flex: 1;
+  padding: 2rem 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .glass-nav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px 20px;
+    gap: 12px;
+  }
+  .nav-links {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  .nav-auth {
+    margin-left: auto;
+  }
+  .main-content {
+    padding: 1.5rem 1rem;
+  }
 }
 </style>
