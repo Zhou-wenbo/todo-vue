@@ -1,121 +1,119 @@
-import { defineStore } from 'pinia';
-import api from '../api';
+import { defineStore } from 'pinia'
+import { supabase } from '../supabase'
 
 export interface Task {
-  _id: string;
-  text: string;
-  completed: boolean;
-  dueDate?: string;
-  priority?: 'high' | 'medium' | 'low';
-}
-
-interface DeletedTask extends Task {
-  deletedAt: number;
+  id: number
+  text: string
+  completed: boolean
+  due_date?: string
+  priority?: 'high' | 'medium' | 'low'
+  created_at: string
+  deleted_at?: string | null
 }
 
 export const useTodoStore = defineStore('todo', {
   state: () => ({
     tasks: [] as Task[],
-    deletedTasks: [] as DeletedTask[],
+    deletedTasks: [] as Task[],
     currentFilter: 'all' as 'all' | 'pending' | 'completed',
     loading: false,
     error: null as string | null,
-    randomTask: '',
-    themeColor: '#42b983',
   }),
   actions: {
     async fetchTasks() {
-      this.loading = true;
-      try {
-        const { data } = await api.get('/tasks');
-        this.tasks = data;
-      } catch (err: any) {
-        this.error = err.response?.data?.message || '获取任务失败';
-        console.error(err);
-      } finally {
-        this.loading = false;
-      }
+      this.loading = true
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+      if (error) this.error = error.message
+      else this.tasks = data
+      this.loading = false
     },
-
-    async addTask(text: string, dueDate?: string, priority?: 'high' | 'medium' | 'low') {
-      try {
-        const { data } = await api.post('/tasks', { text, dueDate, priority });
-        this.tasks.unshift(data);
-      } catch (err: any) {
-        console.error(err);
-        throw err;
-      }
+    async fetchDeletedTasks() {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false })
+      if (!error && data) this.deletedTasks = data
     },
-
-    // 删除任务：移到回收站（不调用后端删除接口）
-    deleteTask(id: string) {
-      const index = this.tasks.findIndex(t => t._id === id);
-      if (index !== -1) {
-        const deletedTask: DeletedTask = {
-          ...this.tasks[index],
-          deletedAt: Date.now()
-        };
-        this.deletedTasks.push(deletedTask);
-        this.tasks.splice(index, 1);
-      }
-    },
-
-    // 恢复任务
-    restoreTask(id: string) {
-      const index = this.deletedTasks.findIndex(t => t._id === id);
-      if (index !== -1) {
-        const { deletedAt, ...task } = this.deletedTasks[index];
-        this.tasks.push(task);
-        this.deletedTasks.splice(index, 1);
-      }
-    },
-
-    // 彻底删除（从回收站永久移除，同时也要调用后端删除接口）
-    async permanentDeleteTask(id: string) {
-      try {
-        await api.delete(`/tasks/${id}`);
-        this.deletedTasks = this.deletedTasks.filter(t => t._id !== id);
-      } catch (err: any) {
-        console.error('彻底删除失败:', err);
-      }
-    },
-
-    // 清空回收站（批量永久删除）
-    async clearDeletedTasks() {
-      for (const task of this.deletedTasks) {
-        try {
-          await api.delete(`/tasks/${task._id}`);
-        } catch (err) {
-          console.error(`删除任务 ${task._id} 失败`, err);
+   async addTask(text: string, dueDate?: string, priority?: string) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('未登录')
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert([{ 
+      text, 
+      due_date: dueDate, 
+      priority, 
+      user_id: user.id 
+    }])
+    .select()
+  if (!error && data) this.tasks.unshift(data[0])
+},
+    async deleteTask(id: number) {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+      if (!error) {
+        const task = this.tasks.find(t => t.id === id)
+        if (task) {
+          this.tasks = this.tasks.filter(t => t.id !== id)
+          this.deletedTasks.unshift({ ...task, deleted_at: new Date().toISOString() })
+        } else {
+          this.fetchDeletedTasks()
         }
       }
-      this.deletedTasks = [];
     },
-
-    async toggleComplete(id: string) {
-      const task = this.tasks.find(t => t._id === id);
-      if (!task) return;
-      try {
-        const { data } = await api.put(`/tasks/${id}`, { completed: !task.completed });
-        const index = this.tasks.findIndex(t => t._id === id);
-        if (index !== -1) this.tasks[index] = data;
-      } catch (err: any) {
-        console.error(err);
+    async restoreTask(id: number) {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: null })
+        .eq('id', id)
+      if (!error) {
+        const task = this.deletedTasks.find(t => t.id === id)
+        if (task) {
+          this.deletedTasks = this.deletedTasks.filter(t => t.id !== id)
+          this.tasks.unshift({ ...task, deleted_at: undefined })
+        } else {
+          this.fetchTasks()
+          this.fetchDeletedTasks()
+        }
       }
     },
-
-    async editTask(id: string, newText: string) {
-      try {
-        const { data } = await api.put(`/tasks/${id}`, { text: newText });
-        const index = this.tasks.findIndex(t => t._id === id);
-        if (index !== -1) this.tasks[index] = data;
-      } catch (err: any) {
-        console.error(err);
+    async permanentDeleteTask(id: number) {
+      const { error } = await supabase.from('tasks').delete().eq('id', id)
+      if (!error) this.deletedTasks = this.deletedTasks.filter(t => t.id !== id)
+    },
+    async clearDeletedTasks() {
+      const ids = this.deletedTasks.map(t => t.id)
+      if (ids.length === 0) return
+      const { error } = await supabase.from('tasks').delete().in('id', ids)
+      if (!error) this.deletedTasks = []
+    },
+    async updateTask(id: number, updates: Partial<Task>) {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', id)
+        .select()
+      if (!error && data) {
+        const index = this.tasks.findIndex(t => t.id === id)
+        if (index !== -1) this.tasks[index] = data[0]
       }
     },
-
+    async toggleComplete(id: number) {
+      const task = this.tasks.find(t => t.id === id)
+      if (task) this.updateTask(id, { completed: !task.completed })
+    },
+    async editTask(id: number, newText: string) {
+      this.updateTask(id, { text: newText })
+    },
     setFilter(filter: 'all' | 'pending' | 'completed') {
-      this.currentFilter = filter;
-    },
-  },
-});
+      this.currentFilter = filter
+    }
+  }
+})

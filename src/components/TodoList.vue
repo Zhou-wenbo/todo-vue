@@ -1,40 +1,31 @@
 <template>
   <ul class="task-list">
     <TodoItem
-      v-for="(task, idx) in filteredTasks"
-      :key="task._id"
+      v-for="(task, idx) in tasks"
+      :key="task.id"
       :task="task"
       :index="idx + 1"
-      @toggle="emit('toggle', task._id)"
-      @delete="emit('delete', task._id)"
-      @edit="emit('edit', task._id)"
-      @click-item="emit('click-item', task._id)"
+      @toggle="$emit('toggle', $event)"
+      @delete="$emit('delete', $event)"
+      @edit="$emit('edit', $event)"
+      @click-item="$emit('click-item', $event)"
     />
   </ul>
 </template>
 
 <script setup lang="ts">
-import TodoItem from './TodoItem.vue';
-import { computed } from 'vue';
-import type { Task } from '../stores/todo';   // 只使用导入的类型
+import TodoItem from './TodoItem.vue'
 
-const props = defineProps<{
-  tasks: Task[];
-  filter: 'all' | 'pending' | 'completed';
-}>();
+defineProps<{
+  tasks: any[]
+}>()
 
-const emit = defineEmits<{
-  (e: 'toggle', id: string): void;
-  (e: 'delete', id: string): void;
-  (e: 'edit', id: string): void;
-  (e: 'click-item', id: string): void;
-}>();
-
-const filteredTasks = computed(() => {
-  if (props.filter === 'pending') return props.tasks.filter(t => !t.completed);
-  if (props.filter === 'completed') return props.tasks.filter(t => t.completed);
-  return props.tasks;
-});
+defineEmits<{
+  (e: 'toggle', id: number): void
+  (e: 'delete', id: number): void
+  (e: 'edit', id: number): void
+  (e: 'click-item', id: number): void
+}>()
 </script>
 
 <style scoped>

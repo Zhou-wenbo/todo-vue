@@ -1,16 +1,13 @@
 <template>
   <div class="todo-view">
-    <!-- 顶部区域：标题与用户快捷操作（用户信息已在 App.vue 导航栏，这里可选保留简洁标题） -->
     <div class="view-header">
       <h1 class="view-title">📋 我的任务看板</h1>
     </div>
 
-    <!-- 添加任务卡片 -->
     <div class="add-task-card">
       <TodoInput @add="addTask" />
     </div>
 
-    <!-- 统计卡片组（仅当有任务时显示） -->
     <div v-if="tasks.length" class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">📌</div>
@@ -35,7 +32,6 @@
       </div>
     </div>
 
-    <!-- 筛选 / 排序 / 搜索栏（玻璃态） -->
     <div class="control-bar">
       <div class="filter-group">
         <TodoFilter :currentFilter="currentFilter" @change="setFilter" />
@@ -54,17 +50,11 @@
         </button>
         <div class="search-wrapper">
           <span class="search-icon">🔍</span>
-          <input 
-            type="text" 
-            v-model="rawKeyword" 
-            placeholder="搜索任务..." 
-            class="search-input"
-          />
+          <input type="text" v-model="rawKeyword" placeholder="搜索任务..." class="search-input" />
         </div>
       </div>
     </div>
 
-    <!-- 任务列表（毛玻璃 + 悬浮效果） -->
     <div class="task-list-container">
       <TodoList
         :tasks="filteredAndSortedTasks"
@@ -79,7 +69,6 @@
       </div>
     </div>
 
-    <!-- 加载指示器 -->
     <div v-if="loading" class="loading-overlay">
       <div class="spinner"></div>
     </div>
@@ -87,91 +76,99 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, provide } from 'vue';
-import { useTodoStore } from '../stores/todo';
-import { storeToRefs } from 'pinia';
-import TodoInput from '../components/TodoInput.vue';
-import TodoFilter from '../components/TodoFilter.vue';
-import TodoList from '../components/TodoList.vue';
-import { useDebounce } from '../composables/useDebounce';
+import { ref, computed, onMounted, provide } from 'vue'
+import { useTodoStore } from '../stores/todo'
+import { storeToRefs } from 'pinia'
+import TodoInput from '../components/TodoInput.vue'
+import TodoFilter from '../components/TodoFilter.vue'
+import TodoList from '../components/TodoList.vue'
+import { useDebounce } from '../composables/useDebounce'
 
-const dueDateFilter = ref<'all'|'has'|'none'>('all');
-const sortOrder = ref<'asc'|'desc'>('asc');
-const priorityOrder = ref<'asc'|'desc'>('asc');
-const todoStore = useTodoStore();
-const { tasks, currentFilter, loading, themeColor } = storeToRefs(todoStore);
-provide('themeColor', themeColor);
+const dueDateFilter = ref<'all'|'has'|'none'>('all')
+const sortOrder = ref<'asc'|'desc'>('asc')
+const priorityOrder = ref<'asc'|'desc'>('asc')
+const todoStore = useTodoStore()
+const { tasks, currentFilter, loading, error } = storeToRefs(todoStore)
+provide('themeColor', ref('#42b983'))   // 简单提供主题色
 
-const rawKeyword = ref('');
-const searchKeyword = useDebounce(rawKeyword, 300);
+const rawKeyword = ref('')
+const searchKeyword = useDebounce(rawKeyword, 300)
 
 const addTask = (text: string, dueDate?: string, priority?: 'high'|'medium'|'low') =>
-  todoStore.addTask(text, dueDate, priority);
-const deleteTask = (id: string) => todoStore.deleteTask(id);
-const toggleComplete = (id: string) => todoStore.toggleComplete(id);
-const setFilter = (filter: 'all' | 'pending' | 'completed') => todoStore.setFilter(filter);
-const handleItemClick = (id: string) => alert(`点击任务 ID: ${id}`);
+  todoStore.addTask(text, dueDate, priority)
+const deleteTask = (id: number) => todoStore.deleteTask(id)
+const toggleComplete = (id: number) => todoStore.toggleComplete(id)
+const setFilter = (filter: 'all' | 'pending' | 'completed') => todoStore.setFilter(filter)
+const handleItemClick = (id: number) => alert(`点击任务 ID: ${id}`)
 
 const togglePriorityOrder = () => {
-  priorityOrder.value = priorityOrder.value === 'asc' ? 'desc' : 'asc';
-};
+  priorityOrder.value = priorityOrder.value === 'asc' ? 'desc' : 'asc'
+}
 
 const filteredAndSortedTasks = computed(() => {
-  let filtered = tasks.value;
+  let filtered = tasks.value
+
+  // 关键词搜索
   if (searchKeyword.value.trim()) {
-    const keyword = searchKeyword.value.trim().toLowerCase();
-    filtered = filtered.filter(t => t.text.toLowerCase().includes(keyword));
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    filtered = filtered.filter(t => t.text.toLowerCase().includes(keyword))
   }
+
+  // 截止日期筛选
   if (dueDateFilter.value === 'has') {
-    filtered = filtered.filter(t => t.dueDate);
+    filtered = filtered.filter(t => t.due_date)
   } else if (dueDateFilter.value === 'none') {
-    filtered = filtered.filter(t => !t.dueDate);
+    filtered = filtered.filter(t => !t.due_date)
   }
+
+  // 优先级映射
   const priorityValue = (p?: string) => {
-    if (p === 'high') return 3;
-    if (p === 'medium') return 2;
-    if (p === 'low') return 1;
-    return 0;
-  };
+    if (p === 'high') return 3
+    if (p === 'medium') return 2
+    if (p === 'low') return 1
+    return 0
+  }
+
   return [...filtered].sort((a, b) => {
-    const pa = priorityValue(a.priority);
-    const pb = priorityValue(b.priority);
+    const pa = priorityValue(a.priority)
+    const pb = priorityValue(b.priority)
     if (pa !== pb) {
-      return priorityOrder.value === 'asc' ? pa - pb : pb - pa;
+      return priorityOrder.value === 'asc' ? pa - pb : pb - pa
     }
     if (sortOrder.value === 'asc') {
-      if (!a.dueDate && !b.dueDate) return 0;
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return a.dueDate.localeCompare(b.dueDate);
+      if (!a.due_date && !b.due_date) return 0
+      if (!a.due_date) return 1
+      if (!b.due_date) return -1
+      return a.due_date.localeCompare(b.due_date)
     } else {
-      if (!a.dueDate && !b.dueDate) return 0;
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return b.dueDate.localeCompare(a.dueDate);
+      if (!a.due_date && !b.due_date) return 0
+      if (!a.due_date) return 1
+      if (!b.due_date) return -1
+      return b.due_date.localeCompare(a.due_date)
     }
-  });
-});
+  })
+})
 
 const toggleSortOrder = () => {
-  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-};
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+}
 
-const handleEditTask = (id: string) => {
-  const task = tasks.value.find(t => t._id === id);
+const handleEditTask = (id: number) => {
+  const task = tasks.value.find(t => t.id === id)
   if (task) {
-    const newText = prompt('编辑任务', task.text);
-    if (newText && newText.trim()) todoStore.editTask(id, newText.trim());
+    const newText = prompt('编辑任务', task.text)
+    if (newText && newText.trim()) todoStore.editTask(id, newText.trim())
   }
-};
+}
 
 onMounted(() => {
-  todoStore.fetchTasks();
-});
+  todoStore.fetchTasks()
+})
 </script>
 
+
 <style scoped>
-/* ========== 全局惊艳风格 ========== */
+/* ========== 全局风格 ========== */
 .todo-view {
   max-width: 1200px;
   margin: 0 auto;
@@ -197,7 +194,6 @@ onMounted(() => {
   letter-spacing: -0.5px;
 }
 
-/* 添加任务卡片 */
 .add-task-card {
   background: rgba(255,255,255,0.6);
   backdrop-filter: blur(12px);
@@ -208,7 +204,6 @@ onMounted(() => {
   border: 1px solid rgba(255,255,255,0.8);
 }
 
-/* 统计卡片网格 */
 .stats-grid {
   display: flex;
   gap: 1.2rem;
@@ -253,7 +248,6 @@ onMounted(() => {
   line-height: 1.2;
 }
 
-/* 控制栏（毛玻璃） */
 .control-bar {
   background: rgba(255,255,255,0.65);
   backdrop-filter: blur(16px);
@@ -322,7 +316,6 @@ onMounted(() => {
   width: 260px;
 }
 
-/* 任务列表容器 */
 .task-list-container {
   background: rgba(255,255,255,0.5);
   backdrop-filter: blur(4px);
@@ -332,7 +325,6 @@ onMounted(() => {
   overflow-y: auto;
   box-shadow: 0 8px 24px rgba(0,0,0,0.02);
 }
-/* 自定义滚动条 */
 .task-list-container::-webkit-scrollbar {
   width: 6px;
 }

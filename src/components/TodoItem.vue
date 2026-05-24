@@ -1,30 +1,66 @@
-<script setup lang="ts">
-import { inject } from 'vue';
-import type { Task } from '../stores/todo';
-
-const props = defineProps<{
-  task: Task;
-  index: number;
-}>();
-
-const emit = defineEmits<{
-  (e: 'toggle', id: string): void;
-  (e: 'edit', id: string): void;
-  (e: 'delete', id: string): void;
-  (e: 'click-item', id: string): void;
-}>();
-
-const themeColor = inject<string>('themeColor', '#42b983');
-</script>
-
 <template>
-  <li class="task-item" @click="emit('click-item', task._id)">
+  <li class="task-item" @click="$emit('click-item', task.id)">
     <span>{{ index }}.</span>
-    <input type="checkbox" :checked="task.completed" @change="emit('toggle', task._id)" />
+    <input type="checkbox" :checked="task.completed" @change="$emit('toggle', task.id)" />
     <span :class="{ completed: task.completed }">{{ task.text }}</span>
-    <span v-if="task.dueDate" class="due-date">📅 {{ task.dueDate }}</span>
-    <span v-if="task.priority" class="priority-badge">{{ task.priority === 'high' ? '🔴' : task.priority === 'medium' ? '🟡' : '🟢' }}</span>
-    <button class="task-edit" :style="{ borderColor: themeColor }" @click.stop="emit('edit', task._id)">✏️</button>
-    <button class="task-delete" :style="{ borderColor: themeColor }" @click.stop="emit('delete', task._id)">🗑️</button>
+    <span v-if="task.due_date" class="due-date">📅 {{ task.due_date }}</span>
+    <span v-if="task.priority" class="priority-badge" :class="task.priority">
+      {{ task.priority === 'high' ? '🔴' : task.priority === 'medium' ? '🟡' : '🟢' }}
+    </span>
+    <button class="task-edit" @click.stop="$emit('edit', task.id)">✏️</button>
+    <button class="task-delete" @click.stop="$emit('delete', task.id)">🗑️</button>
   </li>
 </template>
+
+<script setup lang="ts">
+defineProps<{
+  task: any
+  index: number
+}>()
+
+defineEmits<{
+  (e: 'toggle', id: number): void
+  (e: 'edit', id: number): void
+  (e: 'delete', id: number): void
+  (e: 'click-item', id: number): void
+}>()
+</script>
+
+
+<style scoped>
+.due-date {
+  font-size: 0.8rem;
+  color: #888;
+  margin-left: 10px;
+}
+.task-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  gap: 10px;
+  cursor: pointer;
+}
+.task-item span:first-child {
+  min-width: 28px;
+}
+.task-text {
+  flex: 1;
+}
+.task-text.completed {
+  text-decoration: line-through;
+  color: #aaa;
+}
+.task-edit,
+.task-delete {
+  background: transparent;
+  border: 1px solid;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.priority-badge {
+  margin-left: 8px;
+  font-size: 0.9rem;
+}
+</style>
