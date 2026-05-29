@@ -1,15 +1,6 @@
-/// <reference types="../../node_modules/.vue-global-types/vue_3.5_0_0_0.d.ts" />
 import TodoItem from './TodoItem.vue';
-import { computed } from 'vue';
-const props = defineProps();
-const emit = defineEmits();
-const filteredTasks = computed(() => {
-    if (props.filter === 'pending')
-        return props.tasks.filter(t => !t.completed);
-    if (props.filter === 'completed')
-        return props.tasks.filter(t => t.completed);
-    return props.tasks;
-});
+const __VLS_props = defineProps();
+const __VLS_emit = defineEmits();
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
@@ -19,7 +10,7 @@ let __VLS_directives;
 __VLS_asFunctionalElement(__VLS_intrinsicElements.ul, __VLS_intrinsicElements.ul)({
     ...{ class: "task-list" },
 });
-for (const [task, idx] of __VLS_getVForSourceType((__VLS_ctx.filteredTasks))) {
+for (const [task, idx] of __VLS_getVForSourceType((__VLS_ctx.tasks))) {
     /** @type {[typeof TodoItem, ]} */ ;
     // @ts-ignore
     const __VLS_0 = __VLS_asFunctionalComponent(TodoItem, new TodoItem({
@@ -27,7 +18,7 @@ for (const [task, idx] of __VLS_getVForSourceType((__VLS_ctx.filteredTasks))) {
         ...{ 'onDelete': {} },
         ...{ 'onEdit': {} },
         ...{ 'onClickItem': {} },
-        key: (task._id),
+        key: (task.id),
         task: (task),
         index: (idx + 1),
     }));
@@ -36,7 +27,7 @@ for (const [task, idx] of __VLS_getVForSourceType((__VLS_ctx.filteredTasks))) {
         ...{ 'onDelete': {} },
         ...{ 'onEdit': {} },
         ...{ 'onClickItem': {} },
-        key: (task._id),
+        key: (task.id),
         task: (task),
         index: (idx + 1),
     }, ...__VLS_functionalComponentArgsRest(__VLS_0));
@@ -45,22 +36,22 @@ for (const [task, idx] of __VLS_getVForSourceType((__VLS_ctx.filteredTasks))) {
     let __VLS_5;
     const __VLS_6 = {
         onToggle: (...[$event]) => {
-            __VLS_ctx.emit('toggle', task._id);
+            __VLS_ctx.$emit('toggle', $event);
         }
     };
     const __VLS_7 = {
         onDelete: (...[$event]) => {
-            __VLS_ctx.emit('delete', task._id);
+            __VLS_ctx.$emit('delete', $event);
         }
     };
     const __VLS_8 = {
         onEdit: (...[$event]) => {
-            __VLS_ctx.emit('edit', task._id);
+            __VLS_ctx.$emit('edit', $event);
         }
     };
     const __VLS_9 = {
         onClickItem: (...[$event]) => {
-            __VLS_ctx.emit('click-item', task._id);
+            __VLS_ctx.$emit('click-item', $event);
         }
     };
     var __VLS_2;
@@ -71,8 +62,6 @@ const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
             TodoItem: TodoItem,
-            emit: emit,
-            filteredTasks: filteredTasks,
         };
     },
     __typeEmits: {},

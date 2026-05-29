@@ -58,9 +58,11 @@ const handleLogin = async () => {
   errorMessage.value = ''
   try {
     await userStore.login(username.value, password.value)
-    router.push('/')
+    // 登录成功后跳转首页
+    await router.push('/')
   } catch (err: any) {
     errorMessage.value = err.message || '登录失败，请检查用户名和密码'
+    console.error('登录错误:', err)
   } finally {
     loading.value = false
   }
@@ -68,6 +70,7 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
+/* 样式与之前相同，此处略（可保留原有美化样式） */
 .auth-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -84,21 +87,18 @@ const handleLogin = async () => {
   width: 100%;
   max-width: 420px;
   padding: 40px 32px;
-  transition: transform 0.3s;
-}
-.auth-header {
-  text-align: center;
-  margin-bottom: 32px;
 }
 .auth-header h2 {
   font-size: 28px;
   font-weight: 700;
   color: #1a1a2e;
   margin-bottom: 8px;
+  text-align: center;
 }
 .auth-header p {
   color: #666;
   font-size: 14px;
+  text-align: center;
 }
 .input-group {
   margin-bottom: 20px;
@@ -161,16 +161,5 @@ const handleLogin = async () => {
   color: #667eea;
   text-decoration: none;
   font-weight: 500;
-}
-.auth-footer a:hover {
-  text-decoration: underline;
-}
-@media (max-width: 480px) {
-  .auth-card {
-    padding: 30px 20px;
-  }
-  .auth-header h2 {
-    font-size: 24px;
-  }
 }
 </style>

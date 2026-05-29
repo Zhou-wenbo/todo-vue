@@ -10,8 +10,8 @@ const dueDateFilter = ref('all');
 const sortOrder = ref('asc');
 const priorityOrder = ref('asc');
 const todoStore = useTodoStore();
-const { tasks, currentFilter, loading, themeColor } = storeToRefs(todoStore);
-provide('themeColor', themeColor);
+const { tasks, currentFilter, loading, error } = storeToRefs(todoStore);
+provide('themeColor', ref('#42b983')); // 简单提供主题色
 const rawKeyword = ref('');
 const searchKeyword = useDebounce(rawKeyword, 300);
 const addTask = (text, dueDate, priority) => todoStore.addTask(text, dueDate, priority);
@@ -24,16 +24,19 @@ const togglePriorityOrder = () => {
 };
 const filteredAndSortedTasks = computed(() => {
     let filtered = tasks.value;
+    // 关键词搜索
     if (searchKeyword.value.trim()) {
         const keyword = searchKeyword.value.trim().toLowerCase();
         filtered = filtered.filter(t => t.text.toLowerCase().includes(keyword));
     }
+    // 截止日期筛选
     if (dueDateFilter.value === 'has') {
-        filtered = filtered.filter(t => t.dueDate);
+        filtered = filtered.filter(t => t.due_date);
     }
     else if (dueDateFilter.value === 'none') {
-        filtered = filtered.filter(t => !t.dueDate);
+        filtered = filtered.filter(t => !t.due_date);
     }
+    // 优先级映射
     const priorityValue = (p) => {
         if (p === 'high')
             return 3;
@@ -50,22 +53,22 @@ const filteredAndSortedTasks = computed(() => {
             return priorityOrder.value === 'asc' ? pa - pb : pb - pa;
         }
         if (sortOrder.value === 'asc') {
-            if (!a.dueDate && !b.dueDate)
+            if (!a.due_date && !b.due_date)
                 return 0;
-            if (!a.dueDate)
+            if (!a.due_date)
                 return 1;
-            if (!b.dueDate)
+            if (!b.due_date)
                 return -1;
-            return a.dueDate.localeCompare(b.dueDate);
+            return a.due_date.localeCompare(b.due_date);
         }
         else {
-            if (!a.dueDate && !b.dueDate)
+            if (!a.due_date && !b.due_date)
                 return 0;
-            if (!a.dueDate)
+            if (!a.due_date)
                 return 1;
-            if (!b.dueDate)
+            if (!b.due_date)
                 return -1;
-            return b.dueDate.localeCompare(a.dueDate);
+            return b.due_date.localeCompare(a.due_date);
         }
     });
 });
@@ -73,7 +76,7 @@ const toggleSortOrder = () => {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
 };
 const handleEditTask = (id) => {
-    const task = tasks.value.find(t => t._id === id);
+    const task = tasks.value.find(t => t.id === id);
     if (task) {
         const newText = prompt('编辑任务', task.text);
         if (newText && newText.trim())
